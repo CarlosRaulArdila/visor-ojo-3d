@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Ojo 3D</title>
   <!-- Librería de Google para Model Viewer -->
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
@@ -11,6 +11,7 @@
   </style>
 </head>
 <body>
+  <!-- El visor -->
   <model-viewer 
        id="visor"
        src="Ojo_nuevo.glb" 
@@ -20,32 +21,50 @@
   </model-viewer>
 
   <script>
-    // Función para leer parámetros de URL
+    // Mapa de equivalencias: nombres en la tabla -> nombres reales en el modelo
+    const equivalencias = {
+      "A1 Cristalino": "Cristalino",
+      "A2 Glaucoma": "Glaucoma",
+      "A3 Córnea": "Cornea",
+      "A4 Combinadas": "Combinadas",
+      "A5 Iris": "Iris",
+      "A6 Conjuntiva": "Conjuntiva"
+    };
+
+    // Capturamos el parámetro ?clase= de la URL
     const urlParams = new URLSearchParams(window.location.search);
-    const clase = urlParams.get('clase');
+    let clase = urlParams.get('clase');
 
     const viewer = document.querySelector('#visor');
 
-    viewer.addEventListener('load', () => {
+    // Esperar que el modelo se cargue
+    viewer.addEventListener('load', async () => {
       if (clase) {
-        // Limpia espacios extras
-        const claseLimpia = clase.trim();
+        clase = clase.trim();
+        const nombreReal = equivalencias[clase] || clase;
 
-        // Intentamos obtener el nodo por nombre
-        const node = viewer.model.sceneGraph.getElementByName(claseLimpia);
+        // Accedemos al modelo cargado
+        const root = viewer.model;
+        if (!root) {
+          console.warn("El modelo no está cargado aún");
+          return;
+        }
 
-        if (node) {
-          // Resaltar la pieza: rojo brillante (emissive)
-          node.material.setEmissiveFactor([1, 0, 0]);
+        // Buscar el nodo por nombre
+        const nodo = root.getNodeByName(nombreReal);
 
-          // Atenuar el resto del modelo
-          viewer.model.sceneGraph.traverse((n) => {
-            if (n.material && n !== node) {
-              n.material.pbrMetallicRoughness.setBaseColorFactor([0.5, 0.5, 0.5, 0.3]);
+        if (nodo && nodo.mesh) {
+          // Cambiar color de la pieza seleccionada
+          nodo.mesh.material.emissiveFactor = [1, 0, 0]; // rojo brillante
+
+          // Atenuar las demás piezas
+          root.traverse((n) => {
+            if (n.mesh && n !== nodo) {
+              n.mesh.material.pbrMetallicRoughness.setBaseColorFactor([0.5, 0.5, 0.5, 0.3]);
             }
           });
         } else {
-          console.warn(`No se encontró la parte "${claseLimpia}" en el modelo 3D.`);
+          console.warn(`No se encontró la parte "${nombreReal}" en el modelo 3D.`);
         }
       }
     });
