@@ -1,21 +1,32 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>Ojo 3D</title>
-  <!-- Librería de Google para Model Viewer -->
-  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
-  <style>
-    body { margin: 0; background: #000; }
-    model-viewer { width: 100%; height: 100vh; }
-  </style>
-</head>
-<body>
-  <model-viewer 
-       src="Ojo_nuevo.glb" 
-       auto-rotate 
-       camera-controls 
-       alt="Ojo 3D">
-  </model-viewer>
-</body>
-</html>
+<model-viewer id="visor"
+     src="Ojo_nuevo.glb" 
+     auto-rotate 
+     camera-controls 
+     alt="Ojo 3D">
+</model-viewer>
+
+<script>
+  const urlParams = new URLSearchParams(window.location.search);
+  const clase = urlParams.get('clase');
+
+  const viewer = document.querySelector('#visor');
+
+  viewer.addEventListener('load', () => {
+    if (clase) {
+      const node = viewer.model.sceneGraph.getElementByName(clase.trim());
+
+      if (node) {
+        // Resaltar la pieza
+        node.material.setEmissiveFactor([1, 0, 0]); // Rojo brillante
+        
+        // Atenuar el resto
+        viewer.model.sceneGraph.traverse((n) => {
+          if (n.material && n !== node) {
+            n.material.pbrMetallicRoughness.setBaseColorFactor([0.5, 0.5, 0.5, 0.3]); // gris translúcido
+          }
+        });
+      }
+    }
+  });
+</script>
+
