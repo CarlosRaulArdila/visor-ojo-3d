@@ -19,6 +19,7 @@
   </model-viewer>
 
   <script>
+    // Mapeo de nombres desde Power BI -> nombres reales del modelo
     const equivalencias = {
       "A1 Cristalino": "Cristalino",
       "A2 Glaucoma": "Glaucoma",
@@ -33,36 +34,40 @@
     const viewer = document.querySelector('#visor');
 
     viewer.addEventListener('load', () => {
-      if (clase) {
-        clase = clase.trim();
-        const nombreReal = equivalencias[clase] || clase;
+      // Si NO hay parámetro o es "Seleccionar todo" -> mostrar ojo completo
+      if (!clase || clase.toLowerCase().includes("todo")) {
+        console.log("Mostrar ojo completo sin resaltar");
+        return;
+      }
 
-        // Obtenemos el sceneGraph
-        const graph = viewer.sceneGraph;
-        if (!graph) {
-          console.warn("No se pudo acceder al sceneGraph");
-          return;
-        }
+      clase = clase.trim();
+      const nombreReal = equivalencias[clase] || clase;
 
-        // Buscamos el nodo por nombre
-        let nodo = null;
+      // Accedemos al sceneGraph
+      const graph = viewer.sceneGraph;
+      if (!graph) {
+        console.warn("No se pudo acceder al sceneGraph");
+        return;
+      }
+
+      // Buscamos nodo por nombre
+      let nodo = null;
+      graph.traverse((n) => {
+        if (n.name === nombreReal) nodo = n;
+      });
+
+      if (nodo && nodo.material) {
+        // Resaltar nodo seleccionado
+        nodo.material.setEmissiveFactor([1, 0, 0]);
+
+        // Atenuar el resto
         graph.traverse((n) => {
-          if (n.name === nombreReal) nodo = n;
+          if (n.material && n !== nodo) {
+            n.material.pbrMetallicRoughness.setBaseColorFactor([0.5, 0.5, 0.5, 0.3]);
+          }
         });
-
-        if (nodo && nodo.material) {
-          // Resaltar nodo seleccionado
-          nodo.material.setEmissiveFactor([1, 0, 0]);
-
-          // Atenuar los demás nodos
-          graph.traverse((n) => {
-            if (n.material && n !== nodo) {
-              n.material.pbrMetallicRoughness.setBaseColorFactor([0.5, 0.5, 0.5, 0.3]);
-            }
-          });
-        } else {
-          console.warn(`No se encontró la parte "${nombreReal}" en el modelo`);
-        }
+      } else {
+        console.warn(`No se encontró la parte "${nombreReal}" en el modelo`);
       }
     });
   </script>
