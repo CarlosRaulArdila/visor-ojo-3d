@@ -19,7 +19,6 @@
   </model-viewer>
 
   <script>
-    // Equivalencias exactas con nombres del modelo
     const equivalencias = {
       "A1 Cristalino": "A1 Cristalino",
       "A2 Glaucoma": "A2 Glaucoma",
@@ -41,19 +40,17 @@
     const viewer = document.querySelector('#visor');
 
     viewer.addEventListener('load', () => {
-      const model = viewer.model;
-      if (!model) {
-        console.warn("No se pudo acceder al modelo");
+      const graph = viewer.sceneGraph;
+      if (!graph) {
+        console.warn("No se pudo acceder al sceneGraph");
         return;
       }
 
-      // Si no se seleccionó nada o es "todo", dejamos el ojo en gris
+      // Si no hay clase o es seleccionar todo -> todo gris claro
       if (!clase || clase.toLowerCase().includes("todo")) {
-        model.scene.traverse((obj) => {
-          if (obj.material) {
-            obj.material.color.setRGB(0.7, 0.7, 0.7); // gris claro
-            obj.material.emissive.setRGB(0, 0, 0);
-            obj.material.transparent = false;
+        graph.traverse((n) => {
+          if (n.material && n.material.pbrMetallicRoughness) {
+            n.material.pbrMetallicRoughness.setBaseColorFactor([0.7, 0.7, 0.7, 1]); // gris claro
           }
         });
         return;
@@ -64,22 +61,19 @@
 
       let nodoSeleccionado = null;
 
-      // 1) Poner todo el ojo en gris por defecto
-      model.scene.traverse((obj) => {
-        if (obj.material) {
-          obj.material.color.setRGB(0.4, 0.4, 0.4); // gris oscuro
-          obj.material.emissive.setRGB(0, 0, 0);
-          obj.material.transparent = false;
+      // Poner todo el ojo gris oscuro y localizar el nodo a resaltar
+      graph.traverse((n) => {
+        if (n.material && n.material.pbrMetallicRoughness) {
+          n.material.pbrMetallicRoughness.setBaseColorFactor([0.3, 0.3, 0.3, 1]); // gris oscuro
         }
-        if (obj.name === nombreReal) {
-          nodoSeleccionado = obj;
+        if (n.name === nombreReal) {
+          nodoSeleccionado = n;
         }
       });
 
-      // 2) Resaltar la parte seleccionada
-      if (nodoSeleccionado && nodoSeleccionado.material) {
-        nodoSeleccionado.material.color.setRGB(1, 1, 0); // Amarillo brillante
-        nodoSeleccionado.material.emissive.setRGB(1, 1, 0);
+      // Resaltar el nodo seleccionado en amarillo
+      if (nodoSeleccionado && nodoSeleccionado.material && nodoSeleccionado.material.pbrMetallicRoughness) {
+        nodoSeleccionado.material.pbrMetallicRoughness.setBaseColorFactor([1, 1, 0, 1]); // amarillo brillante
       } else {
         console.warn(`No se encontró la parte "${nombreReal}"`);
       }
