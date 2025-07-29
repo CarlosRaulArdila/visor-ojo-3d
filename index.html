@@ -19,6 +19,7 @@
   </model-viewer>
 
   <script>
+    // Equivalencias exactas con nombres del modelo
     const equivalencias = {
       "A1 Cristalino": "A1 Cristalino",
       "A2 Glaucoma": "A2 Glaucoma",
@@ -40,43 +41,45 @@
     const viewer = document.querySelector('#visor');
 
     viewer.addEventListener('load', () => {
-      if (!clase || clase.toLowerCase().includes("todo")) {
-        console.log("Mostrar ojo completo sin resaltar");
-        return;
-      }
-
-      clase = clase.trim();
-      const nombreReal = equivalencias[clase] || clase;
-
-      // Acceder al modelo cargado
       const model = viewer.model;
       if (!model) {
         console.warn("No se pudo acceder al modelo");
         return;
       }
 
-      // Buscar el nodo por nombre
-      const root = model.scene;
-      let nodo = null;
-      root.traverse((obj) => {
+      // Si no se seleccionó nada o es "todo", dejamos el ojo en gris
+      if (!clase || clase.toLowerCase().includes("todo")) {
+        model.scene.traverse((obj) => {
+          if (obj.material) {
+            obj.material.color.setRGB(0.7, 0.7, 0.7); // gris claro
+            obj.material.emissive.setRGB(0, 0, 0);
+            obj.material.transparent = false;
+          }
+        });
+        return;
+      }
+
+      clase = clase.trim();
+      const nombreReal = equivalencias[clase] || clase;
+
+      let nodoSeleccionado = null;
+
+      // 1) Poner todo el ojo en gris por defecto
+      model.scene.traverse((obj) => {
+        if (obj.material) {
+          obj.material.color.setRGB(0.4, 0.4, 0.4); // gris oscuro
+          obj.material.emissive.setRGB(0, 0, 0);
+          obj.material.transparent = false;
+        }
         if (obj.name === nombreReal) {
-          nodo = obj;
+          nodoSeleccionado = obj;
         }
       });
 
-      if (nodo && nodo.material) {
-        // Resaltar nodo seleccionado
-        nodo.material.emissive.setRGB(1, 1, 0); // Amarillo
-        nodo.material.color.setRGB(1, 1, 0);
-
-        // Atenuar el resto
-        root.traverse((obj) => {
-          if (obj.material && obj !== nodo) {
-            obj.material.color.setRGB(0.3, 0.3, 0.3);
-            obj.material.transparent = true;
-            obj.material.opacity = 0.3;
-          }
-        });
+      // 2) Resaltar la parte seleccionada
+      if (nodoSeleccionado && nodoSeleccionado.material) {
+        nodoSeleccionado.material.color.setRGB(1, 1, 0); // Amarillo brillante
+        nodoSeleccionado.material.emissive.setRGB(1, 1, 0);
       } else {
         console.warn(`No se encontró la parte "${nombreReal}"`);
       }
