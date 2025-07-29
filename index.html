@@ -19,14 +19,21 @@
   </model-viewer>
 
   <script>
-    // Mapeo de nombres desde Power BI -> nombres reales del modelo
+    // Mapeamos solo lo que se usa en el segmentador
     const equivalencias = {
-      "A1 Cristalino": "Cristalino",
-      "A2 Glaucoma": "Glaucoma",
-      "A3 Córnea": "Cornea",
-      "A4 Combinadas": "Combinadas",
-      "A5 Iris": "Iris",
-      "A6 Conjuntiva": "Conjuntiva"
+      "A1 Cristalino": "A1 Cristalino",
+      "A2 Glaucoma": "A2 Glaucoma",
+      "A3 Córnea": "A3 Córnea",
+      "A4 Combinadas": "A4 Combinadas", // si no existe en el glb no resaltará nada
+      "A5 Iris": "A5 Iris",
+      "A6 Conjuntiva": "A6 Conjuntiva",
+      "B1 Vitrectomía": "B1 Vitrectomía",
+      "B2 Esclera": "B2 Esclera",
+      "B4 Vía Intraviítrea": "B4 Vía Intraviítrea",
+      "C. Oculo-plástica": "C. Oculo-plástica",
+      "D. Refractiva Corneal Laser": "D. Refractiva Corneal Laser",
+      "E. Estrabiismo": "E. Estrabiismo",
+      "H. OculoEstética": "H. OculoEstética"
     };
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -34,7 +41,7 @@
     const viewer = document.querySelector('#visor');
 
     viewer.addEventListener('load', () => {
-      // Si NO hay parámetro o es "Seleccionar todo" -> mostrar ojo completo
+      // Si no hay parámetro o seleccionaron todo
       if (!clase || clase.toLowerCase().includes("todo")) {
         console.log("Mostrar ojo completo sin resaltar");
         return;
@@ -43,14 +50,13 @@
       clase = clase.trim();
       const nombreReal = equivalencias[clase] || clase;
 
-      // Accedemos al sceneGraph
+      // Acceder al sceneGraph
       const graph = viewer.sceneGraph;
       if (!graph) {
         console.warn("No se pudo acceder al sceneGraph");
         return;
       }
 
-      // Buscamos nodo por nombre
       let nodo = null;
       graph.traverse((n) => {
         if (n.name === nombreReal) nodo = n;
@@ -60,7 +66,7 @@
         // Resaltar nodo seleccionado
         nodo.material.setEmissiveFactor([1, 0, 0]);
 
-        // Atenuar el resto
+        // Atenuar los demás
         graph.traverse((n) => {
           if (n.material && n !== nodo) {
             n.material.pbrMetallicRoughness.setBaseColorFactor([0.5, 0.5, 0.5, 0.3]);
