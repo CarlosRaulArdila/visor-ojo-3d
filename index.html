@@ -2,21 +2,22 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Prueba Ojo GLB</title>
+  <title>Prueba Ojo GLB (modo seguro)</title>
   <style>
     body, html { margin: 0; padding: 0; overflow: hidden; background: #000; }
     canvas { display: block; }
   </style>
 </head>
 <body>
-<script type="module">
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.156.1/build/three.module.js';
-import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.156.1/examples/jsm/controls/OrbitControls.js';
-import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.156.1/examples/jsm/loaders/GLTFLoader.js';
+<!-- Cargamos ThreeJS y extensiones desde CDN UMD -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.156.1/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.156.1/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.156.1/examples/js/controls/OrbitControls.js"></script>
 
+<script>
 // Escena
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 100);
 camera.position.set(0, 1, 3);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -28,10 +29,10 @@ const light = new THREE.AmbientLight(0xffffff, 1.2);
 scene.add(light);
 
 // Controles
-const controls = new OrbitControls(camera, renderer.domElement);
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
 
-// Cargar modelo
-const loader = new GLTFLoader();
+// Loader GLB
+const loader = new THREE.GLTFLoader();
 loader.load('Ojo_nuevo.glb', (gltf) => {
     scene.add(gltf.scene);
 }, (xhr) => {
@@ -40,7 +41,7 @@ loader.load('Ojo_nuevo.glb', (gltf) => {
     console.error('Error cargando GLB:', error);
 });
 
-// Ajustar tamaño
+// Responsive
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
