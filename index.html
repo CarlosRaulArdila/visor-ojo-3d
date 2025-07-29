@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <title>Ojo 3D</title>
-  <!-- Librería de Google para Model Viewer -->
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
     body { margin: 0; background: #000; }
@@ -11,7 +10,6 @@
   </style>
 </head>
 <body>
-  <!-- El visor -->
   <model-viewer 
        id="visor"
        src="Ojo_nuevo.glb" 
@@ -21,7 +19,6 @@
   </model-viewer>
 
   <script>
-    // Mapa de equivalencias: nombres en la tabla -> nombres reales en el modelo
     const equivalencias = {
       "A1 Cristalino": "Cristalino",
       "A2 Glaucoma": "Glaucoma",
@@ -31,40 +28,40 @@
       "A6 Conjuntiva": "Conjuntiva"
     };
 
-    // Capturamos el parámetro ?clase= de la URL
     const urlParams = new URLSearchParams(window.location.search);
     let clase = urlParams.get('clase');
-
     const viewer = document.querySelector('#visor');
 
-    // Esperar que el modelo se cargue
-    viewer.addEventListener('load', async () => {
+    viewer.addEventListener('load', () => {
       if (clase) {
         clase = clase.trim();
         const nombreReal = equivalencias[clase] || clase;
 
-        // Accedemos al modelo cargado
-        const root = viewer.model;
-        if (!root) {
-          console.warn("El modelo no está cargado aún");
+        // Obtenemos el sceneGraph
+        const graph = viewer.sceneGraph;
+        if (!graph) {
+          console.warn("No se pudo acceder al sceneGraph");
           return;
         }
 
-        // Buscar el nodo por nombre
-        const nodo = root.getNodeByName(nombreReal);
+        // Buscamos el nodo por nombre
+        let nodo = null;
+        graph.traverse((n) => {
+          if (n.name === nombreReal) nodo = n;
+        });
 
-        if (nodo && nodo.mesh) {
-          // Cambiar color de la pieza seleccionada
-          nodo.mesh.material.emissiveFactor = [1, 0, 0]; // rojo brillante
+        if (nodo && nodo.material) {
+          // Resaltar nodo seleccionado
+          nodo.material.setEmissiveFactor([1, 0, 0]);
 
-          // Atenuar las demás piezas
-          root.traverse((n) => {
-            if (n.mesh && n !== nodo) {
-              n.mesh.material.pbrMetallicRoughness.setBaseColorFactor([0.5, 0.5, 0.5, 0.3]);
+          // Atenuar los demás nodos
+          graph.traverse((n) => {
+            if (n.material && n !== nodo) {
+              n.material.pbrMetallicRoughness.setBaseColorFactor([0.5, 0.5, 0.5, 0.3]);
             }
           });
         } else {
-          console.warn(`No se encontró la parte "${nombreReal}" en el modelo 3D.`);
+          console.warn(`No se encontró la parte "${nombreReal}" en el modelo`);
         }
       }
     });
