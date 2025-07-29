@@ -25,90 +25,67 @@
        src="Ojo_nuevo.glb" 
        auto-rotate 
        camera-controls 
+       interaction-prompt="none"
        alt="Ojo 3D">
   </model-viewer>
 
   <div id="info"></div>
 
   <script>
-    function normalizar(texto) {
-      return texto
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/\s+/g, "")
-        .toLowerCase();
-    }
-
     const viewer = document.querySelector('#visor');
     const infoBox = document.querySelector('#info');
-    const urlParams = new URLSearchParams(window.location.search);
-    let clase = urlParams.get('clase');
 
-    viewer.addEventListener('load', () => {
-      const graph = viewer.sceneGraph;
-      if (!graph) return;
-
-      // Si viene parámetro en la URL (sigue funcionando)
-      if (clase && !clase.toLowerCase().includes("todo")) {
-        clase = normalizar(clase);
-        resaltarParte(clase, graph);
-      } else {
-        ponerTodoGris(graph, 0.7);
-      }
-    });
-
-    // Evento de clic para detectar la parte seleccionada
-    viewer.addEventListener('click', async (event) => {
-      const rect = viewer.getBoundingClientRect();
-      const x = (event.clientX - rect.left) * viewer.clientWidth / rect.width;
-      const y = (event.clientY - rect.top) * viewer.clientHeight / rect.height;
-
-      // Calculamos el nodo bajo el clic
-      const hit = await viewer.positionAndNormalFromPoint(x, y);
-      if (!hit) return;
-
-      const graph = viewer.sceneGraph;
-      let nodoSeleccionado = null;
-
-      graph.traverse((n) => {
-        if (n === hit.node) nodoSeleccionado = n;
-      });
-
-      if (nodoSeleccionado) {
-        ponerTodoGris(graph, 0.3);
-        resaltarNodo(nodoSeleccionado);
-
-        // Mostrar información
-        infoBox.innerHTML = `<b>${nodoSeleccionado.name}</b>`;
-        infoBox.style.display = 'block';
-      }
-    });
-
-    // Funciones auxiliares
-    function ponerTodoGris(graph, intensidad) {
+    // Función para poner todo gris
+    function ponerTodoGris(graph, intensidad = 0.6) {
       graph.traverse((n) => {
         if (n.material && n.material.pbrMetallicRoughness) {
+          // Quita cualquier textura y fuerza el color
+          n.material.pbrMetallicRoughness.baseColorTexture = null;
           n.material.pbrMetallicRoughness.setBaseColorFactor([intensidad, intensidad, intensidad, 1]);
         }
       });
     }
 
-    function resaltarParte(nombreClase, graph) {
-      let nodoSeleccionado = null;
-      ponerTodoGris(graph, 0.3);
-      graph.traverse((n) => {
-        if (n.name && normalizar(n.name).includes(nombreClase)) {
-          nodoSeleccionado = n;
-        }
-      });
-      if (nodoSeleccionado) resaltarNodo(nodoSeleccionado);
-    }
-
+    // Función para resaltar en amarillo
     function resaltarNodo(nodo) {
       if (nodo.material && nodo.material.pbrMetallicRoughness) {
-        nodo.material.pbrMetallicRoughness.setBaseColorFactor([1, 1, 0, 1]); // Amarillo
+        nodo.material.pbrMetallicRoughness.baseColorTexture = null;
+        nodo.material.pbrMetallicRoughness.setBaseColorFactor([1, 1, 0, 1]); // amarillo
       }
     }
+
+    viewer.addEventListener('load', () => {
+      const graph = viewer.sceneGraph;
+      if (!graph) {
+        console.warn("No se pudo acceder al sceneGraph");
+        return;
+      }
+
+      // Pone todo el ojo gris al inicio (borra colores de Blender)
+      ponerTodoGris(graph);
+    });
+
+    // Detectar clic en una pieza
+    viewer.addEventListener('click', async (event) => {
+      const rect = viewer.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / rect.width) * viewer.clientWidth;
+      const y = ((event.clientY - rect.top) / rect.height) * viewer.clientHeight;
+
+      // ¿Dónde se hizo clic?
+      const hit = await viewer.positionAndNormalFromPoint(x, y);
+      if (!hit || !hit.node) {
+        infoBox.style.display = 'none';
+        return;
+      }
+
+      const graph = viewer.sceneGraph;
+      ponerTodoGris(graph, 0.3); // todos opacos
+      resaltarNodo(hit.node);
+
+      // Mostrar nombre en el cuadro de información
+      infoBox.innerHTML = `<b>${hit.node.name}</b>`;
+      infoBox.style.display = 'block';
+    });
   </script>
 </body>
 </html>
