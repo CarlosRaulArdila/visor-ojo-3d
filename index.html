@@ -2,82 +2,85 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Ojo 3D</title>
-  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <title>Visor 3D Ojo - Interactivo</title>
   <style>
-    body { margin: 0; background: #000; }
-    model-viewer { width: 100%; height: 100vh; }
+    body, html { margin: 0; height: 100%; background: #000; }
+    canvas { display: block; }
   </style>
 </head>
 <body>
-  <model-viewer 
-       id="visor"
-       src="Ojo_nuevo.glb" 
-       auto-rotate 
-       camera-controls 
-       alt="Ojo 3D">
-  </model-viewer>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.156.1/build/three.module.js';
+import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.156.1/examples/jsm/controls/OrbitControls.js';
+import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.156.1/examples/jsm/loaders/GLTFLoader.js';
 
-  <script>
-    const equivalencias = {
-      "A1 Cristalino": "A1 Cristalino",
-      "A2 Glaucoma": "A2 Glaucoma",
-      "A3 Córnea": "A3 Córnea",
-      "A4 Combinadas": "A4 Combinadas",
-      "A5 Iris": "A5 Iris",
-      "A6 Conjuntiva": "A6 Conjuntiva",
-      "B1 Vitrectomía": "B1 Vitrectomía",
-      "B2 Esclera": "B2 Esclera",
-      "B4 Vía Intravitrea": "B4 Vía Intravitrea",
-      "C. Oculo-plástica": "C. Oculo-plástica",
-      "D. Refractiva Corneal Laser": "D. Refractiva Corneal Laser",
-      "E. Estrabismo": "E. Estrabismo",
-      "H. OculoEstética": "H. OculoEstética"
-    };
+// Parámetro que viene de Power BI
+const params = new URLSearchParams(window.location.search);
+const parteSeleccionada = params.get('parte');
+const colorResaltado = '#ff3333';
 
-    const urlParams = new URLSearchParams(window.location.search);
-    let clase = urlParams.get('clase');
-    const viewer = document.querySelector('#visor');
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 100);
+camera.position.set(0, 1, 3);
 
-    viewer.addEventListener('load', () => {
-      const graph = viewer.sceneGraph;
-      if (!graph) {
-        console.warn("No se pudo acceder al sceneGraph");
-        return;
-      }
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-      // Si no hay clase o es seleccionar todo -> todo gris claro
-      if (!clase || clase.toLowerCase().includes("todo")) {
-        graph.traverse((n) => {
-          if (n.material && n.material.pbrMetallicRoughness) {
-            n.material.pbrMetallicRoughness.setBaseColorFactor([0.7, 0.7, 0.7, 1]); // gris claro
-          }
-        });
-        return;
-      }
+const controls = new OrbitControls(camera, renderer.domElement);
 
-      clase = clase.trim();
-      const nombreReal = equivalencias[clase] || clase;
+const light = new THREE.AmbientLight(0xffffff, 1.2);
+scene.add(light);
 
-      let nodoSeleccionado = null;
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+let modelo;
 
-      // Poner todo el ojo gris oscuro y localizar el nodo a resaltar
-      graph.traverse((n) => {
-        if (n.material && n.material.pbrMetallicRoughness) {
-          n.material.pbrMetallicRoughness.setBaseColorFactor([0.3, 0.3, 0.3, 1]); // gris oscuro
+const loader = new GLTFLoader();
+loader.load('Ojo_nuevo.glb', (gltf) => {
+  modelo = gltf.scene;
+  scene.add(modelo);
+
+  // Resaltar desde Power BI (si hay parámetro)
+  if (parteSeleccionada) {
+    modelo.traverse((obj) => {
+      if (obj.isMesh) {
+        if (obj.name.includes(parteSeleccionada)) {
+          obj.material = new THREE.MeshStandardMaterial({ color: colorResaltado, emissive: 0xff0000, emissiveIntensity: 0.6 });
+        } else {
+          obj.material = new THREE.MeshStandardMaterial({ color: 0xcccccc });
         }
-        if (n.name === nombreReal) {
-          nodoSeleccionado = n;
-        }
-      });
-
-      // Resaltar el nodo seleccionado en amarillo
-      if (nodoSeleccionado && nodoSeleccionado.material && nodoSeleccionado.material.pbrMetallicRoughness) {
-        nodoSeleccionado.material.pbrMetallicRoughness.setBaseColorFactor([1, 1, 0, 1]); // amarillo brillante
-      } else {
-        console.warn(`No se encontró la parte "${nombreReal}"`);
       }
     });
-  </script>
+  }
+}, undefined, (error) => console.error(error));
+
+// Detectar clic en una parte del modelo
+window.addEventListener('click', (event) => {
+  if (!modelo) return;
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(modelo.children, true);
+
+  if (intersects.length > 0) {
+    const parteClic = intersects[0].object.name;
+    // Enviar mensaje al padre (Power BI)
+    window.parent.postMessage({ tipo: 'seleccionOjo', parte: parteClic }, '*');
+  }
+});
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+function animate() {
+  requestAnimationFrame(animate);
+  renderer.render(scene, camera);
+}
+animate();
+</script>
 </body>
 </html>
