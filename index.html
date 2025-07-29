@@ -19,21 +19,14 @@
   </model-viewer>
 
   <script>
-    const equivalencias = {
-      "A1 Cristalino": "A1 Cristalino",
-      "A2 Glaucoma": "A2 Glaucoma",
-      "A3 Cornea": "A3 Cornea",
-      "A4 Combinadas": "A4 Combinadas",
-      "A5 Iris": "A5 Iris",
-      "A6 Conjuntiva": "A6 Conjuntiva",
-      "B1 Vitrectomia": "B1 Vitrectomia",
-      "B2 Esclera": "B2 Esclera",
-      "B4 Via Intravitrea": "B4 Via Intravitrea",
-      "C. Oculo-plastica": "C. Oculo-plastica",
-      "D. Refractiva Corneal Laser": "D. Refractiva Corneal Laser",
-      "E. Estrabismo": "E. Estrabismo",
-      "H. OculoEstetica": "H. OculoEstetica"
-    };
+    // Función para normalizar texto (quita acentos, espacios y pone minúsculas)
+    function normalizar(texto) {
+      return texto
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, "")
+        .toLowerCase();
+    }
 
     const urlParams = new URLSearchParams(window.location.search);
     let clase = urlParams.get('clase');
@@ -46,7 +39,14 @@
         return;
       }
 
-      // Si no hay clase o es seleccionar todo -> todo gris claro
+      // Mostrar todos los nombres del modelo en consola (debug)
+      console.log("----- LISTA DE NOMBRES EN EL MODELO -----");
+      graph.traverse((n) => {
+        if (n.name) console.log(n.name);
+      });
+      console.log("-----------------------------------------");
+
+      // Si no hay clase o es "todo", ojo completo gris claro
       if (!clase || clase.toLowerCase().includes("todo")) {
         graph.traverse((n) => {
           if (n.material && n.material.pbrMetallicRoughness) {
@@ -56,26 +56,27 @@
         return;
       }
 
-      clase = clase.trim();
-      const nombreReal = equivalencias[clase] || clase;
+      // Normalizar clase
+      clase = normalizar(clase);
 
       let nodoSeleccionado = null;
 
-      // Poner todo el ojo gris oscuro y localizar el nodo a resaltar
+      // Poner todo gris oscuro y buscar el nodo que coincida
       graph.traverse((n) => {
         if (n.material && n.material.pbrMetallicRoughness) {
           n.material.pbrMetallicRoughness.setBaseColorFactor([0.3, 0.3, 0.3, 1]); // gris oscuro
         }
-        if (n.name === nombreReal) {
+        // Comparación flexible
+        if (n.name && normalizar(n.name).includes(clase)) {
           nodoSeleccionado = n;
         }
       });
 
-      // Resaltar el nodo seleccionado en amarillo
+      // Resaltar el nodo
       if (nodoSeleccionado && nodoSeleccionado.material && nodoSeleccionado.material.pbrMetallicRoughness) {
-        nodoSeleccionado.material.pbrMetallicRoughness.setBaseColorFactor([1, 1, 0, 1]); // amarillo brillante
+        nodoSeleccionado.material.pbrMetallicRoughness.setBaseColorFactor([1, 1, 0, 1]); // amarillo
       } else {
-        console.warn(`No se encontró la parte "${nombreReal}"`);
+        console.warn(`No se encontró la parte que coincide con "${clase}"`);
       }
     });
   </script>
