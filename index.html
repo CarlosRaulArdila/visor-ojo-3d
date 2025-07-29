@@ -19,12 +19,11 @@
   </model-viewer>
 
   <script>
-    // Mapeamos solo lo que se usa en el segmentador
     const equivalencias = {
       "A1 Cristalino": "A1 Cristalino",
       "A2 Glaucoma": "A2 Glaucoma",
       "A3 Córnea": "A3 Córnea",
-      "A4 Combinadas": "A4 Combinadas", // si no existe en el glb no resaltará nada
+      "A4 Combinadas": "A4 Combinadas",
       "A5 Iris": "A5 Iris",
       "A6 Conjuntiva": "A6 Conjuntiva",
       "B1 Vitrectomía": "B1 Vitrectomía",
@@ -41,7 +40,6 @@
     const viewer = document.querySelector('#visor');
 
     viewer.addEventListener('load', () => {
-      // Si no hay parámetro o seleccionaron todo
       if (!clase || clase.toLowerCase().includes("todo")) {
         console.log("Mostrar ojo completo sin resaltar");
         return;
@@ -50,31 +48,37 @@
       clase = clase.trim();
       const nombreReal = equivalencias[clase] || clase;
 
-      // Acceder al sceneGraph
-      const graph = viewer.sceneGraph;
-      if (!graph) {
-        console.warn("No se pudo acceder al sceneGraph");
+      // Acceder al modelo cargado
+      const model = viewer.model;
+      if (!model) {
+        console.warn("No se pudo acceder al modelo");
         return;
       }
 
+      // Buscar el nodo por nombre
+      const root = model.scene;
       let nodo = null;
-      graph.traverse((n) => {
-        if (n.name === nombreReal) nodo = n;
+      root.traverse((obj) => {
+        if (obj.name === nombreReal) {
+          nodo = obj;
+        }
       });
 
       if (nodo && nodo.material) {
-        // Resaltar nodo seleccionado en amarillo fuerte
-        nodo.material.setEmissiveFactor([1, 1, 0]);
-        nodo.material.pbrMetallicRoughness.setBaseColorFactor([1,1,0,1]);
+        // Resaltar nodo seleccionado
+        nodo.material.emissive.setRGB(1, 1, 0); // Amarillo
+        nodo.material.color.setRGB(1, 1, 0);
 
-        // Atenuar los demás
-        graph.traverse((n) => {
-          if (n.material && n !== nodo) {
-            n.material.pbrMetallicRoughness.setBaseColorFactor([0.3, 0.3, 0.3, 0.2]);
+        // Atenuar el resto
+        root.traverse((obj) => {
+          if (obj.material && obj !== nodo) {
+            obj.material.color.setRGB(0.3, 0.3, 0.3);
+            obj.material.transparent = true;
+            obj.material.opacity = 0.3;
           }
         });
       } else {
-        console.warn(`No se encontró la parte "${nombreReal}" en el modelo`);
+        console.warn(`No se encontró la parte "${nombreReal}"`);
       }
     });
   </script>
