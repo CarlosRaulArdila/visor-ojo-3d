@@ -136,7 +136,7 @@
         part.material.color.set(0xff4444); // rojo claro
 
         // Mostrar nombre y descripción
-        const name = part.name || "Sin nombre";
+        const name = (part.name || "Sin nombre").replace(/_/g, ' ').trim();
         nameEl.textContent = name;
         descEl.textContent = descriptions[name] || "Sin descripción disponible.";
       }
@@ -156,3 +156,4 @@
   </script>
 </body>
 </html>
+
