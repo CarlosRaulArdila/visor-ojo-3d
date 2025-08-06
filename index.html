@@ -87,8 +87,9 @@
 
     // Obtener parte desde URL
     function getParteDesdeURL() {
-      const params = new URLSearchParams(window.location.search);
-      const parte = params.get("parte");
+      const urlParams = new URLSearchParams(window.location.search);
+      const parteSeleccionada = urlParams.get("parte");
+      const conteo = urlParams.get("conteo");
       return parte ? parte.replace(/\s/g, "_") : null;
     }
 
@@ -173,3 +174,4 @@
   </script>
 </body>
 </html>
+
