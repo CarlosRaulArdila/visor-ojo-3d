@@ -28,7 +28,6 @@
       padding: 16px;
       border-radius: 6px;
     }
-
     #info-panel h2 {
       margin-top: 0;
       font-size: 1.1em;
@@ -38,10 +37,10 @@
 </head>
 <body>
   <div id="info-panel">
-    <h2>Información anatómica</h2>
+    <h2>Información Anatómica</h2>
     <p><strong>Nombre:</strong> <span id="part-name">-</span></p>
     <p><strong>Descripción:</strong> <span id="part-desc">-</span></p>
-    <p><strong>Procedimientos:</strong> <span id="part-count">-</span></p>
+    <p><strong>Procedimientos:</strong> <span id="conteo-proc">-</span></p>
   </div>
 
   <script type="module">
@@ -49,11 +48,6 @@
     import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
     import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
     import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-
-    // Leer parámetros de la URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const parteSeleccionada = urlParams.get("parte"); // por ejemplo: A1_Cristalino
-    const conteo = urlParams.get("conteo");
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x202020);
@@ -73,7 +67,7 @@
     dirLight.position.set(5, 10, 7.5);
     scene.add(dirLight);
 
-    // Descripciones médicas
+    // Mapas de descripción
     const descriptions = {
       "A1_Cristalino": "Lente natural del ojo. Puede desarrollar cataratas.",
       "A3_Cornea": "Capa transparente frontal. Protege y enfoca la luz.",
@@ -92,11 +86,30 @@
 
     const nameEl = document.getElementById("part-name");
     const descEl = document.getElementById("part-desc");
-    const countEl = document.getElementById("part-count");
+    const conteoEl = document.getElementById("conteo-proc");
 
+    // Leer CSV de GitHub y armar mapa de conteos
+    const procedureCounts = {};
+
+    fetch("https://raw.githubusercontent.com/carlosraulardila/visor-ojo-3d/main/Hechos_CEM.csv")
+      .then(res => res.text())
+      .then(text => {
+        const rows = text.trim().split("\n");
+        const headers = rows[0].split(",");
+        const claseIdx = headers.indexOf("Clase de Procedimiento");
+
+        for (let i = 1; i < rows.length; i++) {
+          const cols = rows[i].split(",");
+          const clase = cols[claseIdx]?.trim().replace(/ /g, "_");
+          if (clase) {
+            procedureCounts[clase] = (procedureCounts[clase] || 0) + 1;
+          }
+        }
+      });
+
+    // Cargar modelo
     const dracoLoader = new DRACOLoader();
     dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
-
     const loader = new GLTFLoader();
     loader.setDRACOLoader(dracoLoader);
 
@@ -109,20 +122,8 @@
 
       model.traverse(child => {
         if (child.isMesh) {
-          child.name = child.name.trim();
+          child.name = child.name.trim().replace(/ /g, "_");
           child.userData.originalMaterial = child.material.clone();
-
-          // Resaltar automáticamente si coincide con parteSeleccionada
-          if (parteSeleccionada && child.name.replace(/\s/g, "_") === parteSeleccionada) {
-            highlighted = child;
-            originalMaterial = child.material;
-            child.material = child.material.clone();
-            child.material.color.set(0xff4444);
-
-            nameEl.textContent = child.name;
-            descEl.textContent = descriptions[parteSeleccionada] || "Sin descripción disponible.";
-            countEl.textContent = conteo || "-";
-          }
         }
       });
 
@@ -131,7 +132,7 @@
       console.error("Error al cargar:", err);
     });
 
-    // Raycasting para interacción manual
+    // Interacción
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
@@ -144,6 +145,7 @@
       if (intersects.length > 0) {
         const part = intersects[0].object;
 
+        // Restaurar color anterior
         if (highlighted && originalMaterial) {
           highlighted.material = originalMaterial;
         }
@@ -153,10 +155,10 @@
         part.material = part.material.clone();
         part.material.color.set(0xff4444);
 
-        const name = part.name || "Sin nombre";
+        const name = part.name;
         nameEl.textContent = name;
-        descEl.textContent = descriptions[name.replace(/\s/g, "_")] || "Sin descripción disponible.";
-        countEl.textContent = conteo || "-";
+        descEl.textContent = descriptions[name] || "Sin descripción disponible.";
+        conteoEl.textContent = procedureCounts[name] || 0;
       }
     });
 
