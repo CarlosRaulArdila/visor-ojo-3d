@@ -22,12 +22,13 @@
       position: absolute;
       top: 10px;
       right: 10px;
-      width: 280px;
+      width: 300px;
       background: rgba(0,0,0,0.7);
       color: white;
       padding: 16px;
       border-radius: 6px;
     }
+
     #info-panel h2 {
       margin-top: 0;
       font-size: 1.1em;
@@ -49,6 +50,11 @@
     import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
     import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
+    // Leer parámetros de la URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const parteSeleccionada = urlParams.get("parte"); // por ejemplo: A1_Cristalino
+    const conteo = urlParams.get("conteo");
+
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x202020);
 
@@ -67,6 +73,7 @@
     dirLight.position.set(5, 10, 7.5);
     scene.add(dirLight);
 
+    // Descripciones médicas
     const descriptions = {
       "A1_Cristalino": "Lente natural del ojo. Puede desarrollar cataratas.",
       "A3_Cornea": "Capa transparente frontal. Protege y enfoca la luz.",
@@ -85,28 +92,11 @@
 
     const nameEl = document.getElementById("part-name");
     const descEl = document.getElementById("part-desc");
-    const conteoEl = document.getElementById("part-count");
+    const countEl = document.getElementById("part-count");
 
-    const procedureCounts = {};
-
-    // Leer parte seleccionada desde URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const parteSeleccionada = urlParams.get("parte");
-
-    // Cargar CSV con conteos
-    fetch("Hechos_CEM.csv")
-      .then(response => response.text())
-      .then(data => {
-        const rows = data.split("\n").slice(1); // skip header
-        rows.forEach(row => {
-          const [clase, tipo, conteo] = row.trim().split(",");
-          if (clase) procedureCounts[clase] = parseInt(conteo);
-        });
-      });
-
-    // Cargar modelo 3D
     const dracoLoader = new DRACOLoader();
     dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
+
     const loader = new GLTFLoader();
     loader.setDRACOLoader(dracoLoader);
 
@@ -119,18 +109,19 @@
 
       model.traverse(child => {
         if (child.isMesh) {
-          child.name = child.name.trim().replace(/\s/g, "_");
+          child.name = child.name.trim();
           child.userData.originalMaterial = child.material.clone();
 
-          if (parteSeleccionada && child.name === parteSeleccionada) {
+          // Resaltar automáticamente si coincide con parteSeleccionada
+          if (parteSeleccionada && child.name.replace(/\s/g, "_") === parteSeleccionada) {
             highlighted = child;
             originalMaterial = child.material;
             child.material = child.material.clone();
             child.material.color.set(0xff4444);
 
             nameEl.textContent = child.name;
-            descEl.textContent = descriptions[child.name] || "Sin descripción.";
-            conteoEl.textContent = procedureCounts[child.name] ?? 0;
+            descEl.textContent = descriptions[parteSeleccionada] || "Sin descripción disponible.";
+            countEl.textContent = conteo || "-";
           }
         }
       });
@@ -140,7 +131,7 @@
       console.error("Error al cargar:", err);
     });
 
-    // Raycasting para selección manual
+    // Raycasting para interacción manual
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
@@ -162,10 +153,10 @@
         part.material = part.material.clone();
         part.material.color.set(0xff4444);
 
-        const name = part.name;
+        const name = part.name || "Sin nombre";
         nameEl.textContent = name;
-        descEl.textContent = descriptions[name] || "Sin descripción.";
-        conteoEl.textContent = procedureCounts[name] ?? 0;
+        descEl.textContent = descriptions[name.replace(/\s/g, "_")] || "Sin descripción disponible.";
+        countEl.textContent = conteo || "-";
       }
     });
 
