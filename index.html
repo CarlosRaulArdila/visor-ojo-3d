@@ -17,7 +17,6 @@
   <style>
     body { margin: 0; overflow: hidden; font-family: sans-serif; }
     canvas { display: block; }
-
     #info-panel {
       position: absolute;
       top: 10px;
@@ -86,14 +85,22 @@
     const nameEl = document.getElementById("part-name");
     const descEl = document.getElementById("part-desc");
 
+    // Obtener parte desde URL
+    function getParteDesdeURL() {
+      const params = new URLSearchParams(window.location.search);
+      const parte = params.get("parte");
+      return parte ? parte.replace(/\s/g, "_") : null;
+    }
+
+    let highlighted = null;
+    let originalMaterial = null;
+    const parteSeleccionada = getParteDesdeURL();
+
     // Cargar modelo
     const dracoLoader = new DRACOLoader();
     dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
     const loader = new GLTFLoader();
     loader.setDRACOLoader(dracoLoader);
-
-    let highlighted = null;
-    let originalMaterial = null;
 
     loader.load('Ojo_nuevo.glb', gltf => {
       const model = gltf.scene;
@@ -101,8 +108,19 @@
 
       model.traverse(child => {
         if (child.isMesh) {
-          child.name = child.name.trim(); // limpiar espacios
-          child.userData.originalMaterial = child.material.clone(); // guardar material original
+          child.name = child.name.trim();
+          child.userData.originalMaterial = child.material.clone();
+
+          // Si el nombre coincide con la parte pasada por parámetro
+          if (parteSeleccionada && child.name === parteSeleccionada) {
+            highlighted = child;
+            originalMaterial = child.material;
+            child.material = child.material.clone();
+            child.material.color.set(0xff4444);
+
+            nameEl.textContent = child.name;
+            descEl.textContent = descriptions[child.name] || "Sin descripción disponible.";
+          }
         }
       });
 
@@ -129,13 +147,12 @@
           highlighted.material = originalMaterial;
         }
 
-        // Guardar original y resaltar
+        // Resaltar nuevo
         highlighted = part;
         originalMaterial = part.material;
         part.material = part.material.clone();
-        part.material.color.set(0xff4444); // rojo claro
+        part.material.color.set(0xff4444);
 
-        // Mostrar nombre y descripción
         const name = part.name || "Sin nombre";
         nameEl.textContent = name;
         descEl.textContent = descriptions[name] || "Sin descripción disponible.";
@@ -156,6 +173,3 @@
   </script>
 </body>
 </html>
-
-
-
