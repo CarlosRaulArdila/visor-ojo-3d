@@ -27,11 +27,12 @@
       color: white;
       padding: 10px;
       border-radius: 6px;
+      font-size: 0.85em;
     }
 
     #info-panel h2 {
       margin-top: 0;
-      font-size: 0.85em;
+      font-size: 1em;
       color: #90caf9;
     }
   </style>
@@ -48,9 +49,12 @@
     import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
     import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
+    // Leer parámetros de la URL
     const urlParams = new URLSearchParams(window.location.search);
     const parteSeleccionada = urlParams.get("parte");
-    
+
+    const normalize = str => str.replace(/[.\s\-]/g, "_"); // <-- función de normalización
+
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x202020);
 
@@ -68,11 +72,6 @@
     const dirLight = new THREE.DirectionalLight(0xffffff, 1);
     dirLight.position.set(5, 10, 7.5);
     scene.add(dirLight);
-
-    const descriptions = {
-      "A1_Cristalino": "Lente natural del ojo. Puede desarrollar cataratas.",
-      // (Otras descripciones se mantienen por si se usan en otro lado)
-    };
 
     const nameEl = document.getElementById("part-name");
 
@@ -94,7 +93,8 @@
           child.name = child.name.trim();
           child.userData.originalMaterial = child.material.clone();
 
-          if (parteSeleccionada && child.name.replace(/\s/g, "_") === parteSeleccionada) {
+          // Resaltar automáticamente si coincide con parteSeleccionada
+          if (parteSeleccionada && normalize(child.name) === parteSeleccionada) {
             highlighted = child;
             originalMaterial = child.material;
             child.material = child.material.clone();
@@ -110,6 +110,7 @@
       console.error("Error al cargar:", err);
     });
 
+    // Raycasting para interacción manual
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
@@ -150,4 +151,3 @@
   </script>
 </body>
 </html>
-
