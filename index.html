@@ -22,16 +22,17 @@
       position: absolute;
       top: 10px;
       right: 10px;
-      width: 250px;
+      width: 260px;
       background: rgba(0,0,0,0.7);
       color: white;
       padding: 12px;
       border-radius: 6px;
+      font-size: 0.9em;
     }
 
     #info-panel h2 {
       margin-top: 0;
-      font-size: 1.1em;
+      font-size: 1em;
       color: #90caf9;
     }
   </style>
@@ -51,7 +52,7 @@
     const normalize = str => str.replace(/[.\s\-]/g, "_");
 
     const urlParams = new URLSearchParams(window.location.search);
-    const parteSeleccionada = urlParams.get("parte");
+    const parteSeleccionada = urlParams.get("parte"); // ejemplo: A1_Cristalino
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x202020);
@@ -97,6 +98,7 @@
             child.material = child.material.clone();
             child.material.color.set(0xff4444);
 
+            // ✅ Mostrar el nombre real del modelo
             nameEl.textContent = child.name;
           }
         }
@@ -107,6 +109,7 @@
       console.error("Error al cargar:", err);
     });
 
+    // Raycasting
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
@@ -128,6 +131,7 @@
         part.material = part.material.clone();
         part.material.color.set(0xff4444);
 
+        // ✅ Mostrar el nombre exacto sin normalizar
         nameEl.textContent = part.name;
       }
     });
